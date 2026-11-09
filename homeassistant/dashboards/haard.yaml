@@ -1,0 +1,111 @@
+# Lovelace storage dashboard — same pattern as Laadpaal.
+# Pushed to HA as sidebar view "Haard" (dashboard-haard).
+title: Home
+sections:
+  - type: grid
+    cards:
+      - type: heading
+        heading: Dimplex Vivente
+        heading_style: title
+        icon: mdi:fireplace
+
+      - type: tile
+        entity: switch.dimplex_fireplace_fireplace
+        name: Haard
+        icon: mdi:fireplace
+        features:
+          - type: toggle
+        features_position: bottom
+        vertical: true
+
+      - type: tile
+        entity: switch.woonkamer_dimplex_fireplace_fireplace_heat
+        name: Warmte
+        icon: mdi:radiator
+        features:
+          - type: toggle
+        features_position: bottom
+        vertical: true
+
+      - type: tile
+        entity: number.woonkamer_dimplex_fireplace_fireplace_temperature
+        name: Temperatuur
+        icon: mdi:thermometer
+        features:
+          - type: numeric-input
+            style: buttons
+        features_position: bottom
+        vertical: true
+
+      - type: tile
+        entity: number.woonkamer_dimplex_fireplace_fireplace_flame
+        name: Vlam
+        icon: mdi:fire
+        features:
+          - type: numeric-input
+            style: buttons
+        features_position: bottom
+        vertical: true
+
+      - type: tile
+        entity: number.woonkamer_dimplex_fireplace_fireplace_ambient
+        name: Sfeerlicht
+        icon: mdi:palette
+        features:
+          - type: numeric-input
+            style: buttons
+        features_position: bottom
+        vertical: true
+
+      - type: tile
+        entity: number.woonkamer_dimplex_fireplace_fireplace_volume
+        name: Volume
+        icon: mdi:volume-high
+        features:
+          - type: numeric-input
+            style: buttons
+        features_position: bottom
+        vertical: true
+
+      - type: tile
+        entity: number.woonkamer_dimplex_fireplace_fireplace_timer
+        name: Timer
+        icon: mdi:timer-outline
+        features:
+          - type: numeric-input
+            style: buttons
+        features_position: bottom
+        vertical: true
+
+      - type: tile
+        entity: select.woonkamer_dimplex_fireplace_fireplace_smartsense
+        name: SmartSense
+        icon: mdi:motion-sensor
+        vertical: true
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            title: Huidige stand
+            content: |
+              {% set on = is_state('switch.dimplex_fireplace_fireplace', 'on') %}
+              {% set heat = is_state('switch.woonkamer_dimplex_fireplace_fireplace_heat', 'on') %}
+              {% set temp = states('number.woonkamer_dimplex_fireplace_fireplace_temperature') %}
+              {% set flame = states('number.woonkamer_dimplex_fireplace_fireplace_flame') | int(0) %}
+              {% set amb = states('number.woonkamer_dimplex_fireplace_fireplace_ambient') | int(0) %}
+              {% set vol = states('number.woonkamer_dimplex_fireplace_fireplace_volume') | int(0) %}
+              {% set timer = states('number.woonkamer_dimplex_fireplace_fireplace_timer') | float(0) %}
+              {% set snsr = states('select.woonkamer_dimplex_fireplace_fireplace_smartsense') %}
+              {% if on %}
+              **Aan**{% if heat %} — warmte aan{% else %} — alleen vlam{% endif %}
+
+              {{ temp }} °C · vlam F{{ flame }} · sfeer AMB{{ amb }} · volume {{ vol if vol else 'uit' }}
+              {% if timer %}
+              Timer {{ timer }} uur
+              {% else %}
+              Geen timer
+              {% endif %}
+              · SmartSense {{ snsr }}
+              {% else %}
+              *Haard uit.*
+              {% endif %}

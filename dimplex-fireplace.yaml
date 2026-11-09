@@ -1,0 +1,91 @@
+# ESPHome config for Dimplex Flame Connect fireplaces (e.g. VVT75-EU Vivente)
+#
+# Based on community reverse-engineering by gjongenelen:
+# https://gist.github.com/gjongenelen/62d80815bd518841db55f64bb7ed4ec2
+#
+# Requires an ESP32 placed within ~10m of the fireplace.
+# This is NOT a Bluetooth proxy — the ESP32 connects directly to the fire.
+
+substitutions:
+  device_name: dimplex-fireplace
+  friendly_name: Dimplex Fireplace
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+external_components:
+  - source: components
+    components: [flame]
+
+# Required for BLE passkey pairing with the fireplace
+esp32_ble:
+  io_capability: keyboard_only
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: true
+
+ble_client:
+  - mac_address: !secret fireplace_mac
+    id: fireplace_ble
+    auto_connect: true
+    on_connect:
+      then:
+        - logger.log: "BLE client connected to fireplace"
+    on_disconnect:
+      then:
+        - logger.log: "BLE client disconnected from fireplace"
+    on_passkey_request:
+      then:
+        - logger.log: "Pairing with fireplace — sending PIN"
+        - ble_client.passkey_reply:
+            id: fireplace_ble
+            passkey: !secret fireplace_pin
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  ap:
+    ssid: "${device_name}-setup"
+    password: !secret ap_password
+
+captive_portal:
+
+flame:
+  id: fireplace
+  ble_client_id: fireplace_ble
+  toggle:
+    name: "Fireplace"
+    icon: mdi:fireplace
+  heat:
+    name: "Fireplace heat"
+    icon: mdi:radiator
+  temperature:
+    name: "Fireplace temperature"
+  volume:
+    name: "Fireplace volume"
+  ambient:
+    name: "Fireplace ambient"
+  brightness:
+    name: "Fireplace flame"
+  timer:
+    name: "Fireplace timer"
+  sensor:
+    name: "Fireplace SmartSense"

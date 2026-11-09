@@ -1,0 +1,40 @@
+# Temporary config — scan for your fireplace MAC, then delete or ignore this file.
+# Flash with: esphome run ble-scan.yaml
+# Watch logs for "FI0513" or "Dimplex"
+
+esphome:
+  name: ble-scan
+  friendly_name: BLE Scan
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: DEBUG
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+
+ota:
+  - platform: esphome
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: true
+  on_ble_advertise:
+    then:
+      - lambda: |-
+          std::string name = x.get_name();
+          if (name.find("FI0513") != std::string::npos ||
+              name.find("Dimplex") != std::string::npos ||
+              name.find("FI0") != std::string::npos) {
+            ESP_LOGW("SCAN", ">>> FOUND: name='%s'  MAC=%s  RSSI=%d",
+                     name.c_str(),
+                     x.address_str().c_str(),
+                     x.get_rssi());
+          }
