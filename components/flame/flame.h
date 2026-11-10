@@ -502,23 +502,39 @@ class Flame : public Component, public ble_client::BLEClientNode {
     if (!std::isnan(this->temperature_number_->state)) {
       wanted_temp = static_cast<uint8_t>(this->temperature_number_->state);
     }
-    if (this->toggle_->state != this->flame_state_ || this->heat_->state != this->heat_state_ ||
-        wanted_temp != this->temperature_) {
-      const bool power = this->toggle_->state;
-      const bool heat = power && this->heat_->state;
-      const uint8_t mode = !power ? 0x06 : (heat ? 0x02 : 0x08);
-      this->temperature_ = wanted_temp;
-      uint8_t pkt[6] = {mode, 0, 0, 0, this->temperature_, 0};
-      uint8_t tset[2] = {this->temperature_, 0};
-      ESP_LOGI(TAG, "Set power=%s heat=%s temp=%u mode=0x%02X", YESNO(power), YESNO(heat), this->temperature_, mode);
+    const bool power = this->toggle_->state;
+    const bool heat = power && this->heat_->state;
+    const uint8_t mode = !power ? 0x06 : (heat ? 0x02 : 0x08);
+    const bool power_changed =
+        this->toggle_->state != this->flame_state_ || this->heat_->state != this->heat_state_;
+    const bool temp_changed =
+        this->temperature_number_->dirty() || wanted_temp != this->temperature_;
+
+    if (power_changed) {
+      uint8_t pkt[6] = {mode, 0, 0, 0, wanted_temp, 0};
+      ESP_LOGI(TAG, "Set power=%s heat=%s temp=%u mode=0x%02X", YESNO(power), YESNO(heat), wanted_temp, mode);
       this->enqueue_write_(this->h_control_, pkt, sizeof(pkt));
-      this->enqueue_write_(this->h_temp_, tset, sizeof(tset));
       this->flame_state_ = power;
       this->heat_state_ = heat;
       this->toggle_->clear_dirty();
       this->heat_->clear_dirty();
-      this->temperature_number_->clear_dirty();
       this->heat_->publish_state(heat);
+      this->last_status_poll_ms_ = millis();
+    }
+
+    if (temp_changed) {
+      // 0x1003 is the temperature-set register. Writing it makes the
+      // fireplace display flash the setpoint, so only do this when the
+      // user actually changes temperature — not on every on/off.
+      this->temperature_ = wanted_temp;
+      uint8_t tset[2] = {this->temperature_, 0};
+      ESP_LOGI(TAG, "Set temp=%u", this->temperature_);
+      this->enqueue_write_(this->h_temp_, tset, sizeof(tset));
+      if (!power_changed) {
+        uint8_t pkt[6] = {mode, 0, 0, 0, this->temperature_, 0};
+        this->enqueue_write_(this->h_control_, pkt, sizeof(pkt));
+      }
+      this->temperature_number_->clear_dirty();
       this->last_status_poll_ms_ = millis();
     }
 
